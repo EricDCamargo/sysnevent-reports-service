@@ -1,8 +1,10 @@
 import express, { NextFunction, Request, Response } from 'express'
 import cors from 'cors'
 import { StatusCodes } from 'http-status-codes'
-
+import dotenv from 'dotenv'
 import { router } from './routes'
+
+dotenv.config()
 
 const app = express()
 app.use(express.json())
