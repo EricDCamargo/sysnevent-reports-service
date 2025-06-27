@@ -1,10 +1,8 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-
 import axios from 'axios'
 import { AppError } from '../../errors/AppError'
 import { GenerateReportService } from '../../services/report/GenerateReportService'
-
 
 class GenerateReportController {
   async handle(req: Request, res: Response) {
@@ -23,26 +21,41 @@ class GenerateReportController {
     }
 
     try {
-      // Chama o microserviço de participantes
-      const response = await axios.get(
-        `${process.env.PARTICIPANT_SERVICE_URL}/participants/filtered`,
-        {
-          params: {
-            event_id,
-            apenasAlunos: includeStudents,
-            apenasFatec: includeFatec,
-            apenasExternos: includeExternal
-          },
-          headers: {
-            Authorization: req.headers.authorization || ''
+      let response
+
+      try {
+        response = await axios.get(
+          `${process.env.PARTICIPANT_SERVICE_URL}/filtered`,
+          {
+            params: {
+              event_id,
+              onlyStudents: includeStudents,
+              onlyFatec: includeFatec,
+              onlyExternal: includeExternal
+            },
+            headers: {
+              Authorization: req.headers.authorization || ''
+            }
           }
-        }
-      )
+        )
+      } catch (error: any) {
+        throw new AppError(
+          error?.response?.data?.error || 'Evento não encontrado.',
+          error?.response?.status || StatusCodes.BAD_REQUEST
+        )
+      }
 
       const participants = response.data.data
+
+      if (!Array.isArray(participants) || participants.length === 0) {
+        throw new AppError(
+          response?.data?.error || 'Nenhum participante encontrado.',
+          StatusCodes.NOT_FOUND
+        )
+      }
+
       const generatePDF = new GenerateReportService()
 
-      // Geração do PDF
       const pdfBuffer = await generatePDF.execute({
         participants,
         isAttendanceReport: isAttendanceReport === true
