@@ -20,7 +20,7 @@ const GenerateReportService_1 = require("../../services/report/GenerateReportSer
 class GenerateReportController {
     handle(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e, _f, _g;
             const { event_id, includeStudents, includeFatec, includeExternal, isAttendanceReport } = req.body;
             if (!event_id) {
                 return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
@@ -28,21 +28,28 @@ class GenerateReportController {
                 });
             }
             try {
-                // Chama o microserviço de participantes
-                const response = yield axios_1.default.get(`${process.env.PARTICIPANT_SERVICE_URL}/participants/filtered`, {
-                    params: {
-                        event_id,
-                        apenasAlunos: includeStudents,
-                        apenasFatec: includeFatec,
-                        apenasExternos: includeExternal
-                    },
-                    headers: {
-                        Authorization: req.headers.authorization || ''
-                    }
-                });
+                let response;
+                try {
+                    response = yield axios_1.default.get(`${process.env.PARTICIPANT_SERVICE_URL}/filtered`, {
+                        params: {
+                            event_id,
+                            onlyStudents: includeStudents,
+                            onlyFatec: includeFatec,
+                            onlyExternal: includeExternal
+                        },
+                        headers: {
+                            Authorization: req.headers.authorization || ''
+                        }
+                    });
+                }
+                catch (error) {
+                    throw new AppError_1.AppError(((_b = (_a = error === null || error === void 0 ? void 0 : error.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) || 'Evento não encontrado.', ((_c = error === null || error === void 0 ? void 0 : error.response) === null || _c === void 0 ? void 0 : _c.status) || http_status_codes_1.StatusCodes.BAD_REQUEST);
+                }
                 const participants = response.data.data;
+                if (!Array.isArray(participants) || participants.length === 0) {
+                    throw new AppError_1.AppError(((_d = response === null || response === void 0 ? void 0 : response.data) === null || _d === void 0 ? void 0 : _d.error) || 'Nenhum participante encontrado.', http_status_codes_1.StatusCodes.NOT_FOUND);
+                }
                 const generatePDF = new GenerateReportService_1.GenerateReportService();
-                // Geração do PDF
                 const pdfBuffer = yield generatePDF.execute({
                     participants,
                     isAttendanceReport: isAttendanceReport === true
@@ -54,8 +61,8 @@ class GenerateReportController {
             catch (error) {
                 console.error(error);
                 if (axios_1.default.isAxiosError(error)) {
-                    return res.status(((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) || 500).json({
-                        error: ((_c = (_b = error.response) === null || _b === void 0 ? void 0 : _b.data) === null || _c === void 0 ? void 0 : _c.error) || 'Erro ao buscar participantes.'
+                    return res.status(((_e = error.response) === null || _e === void 0 ? void 0 : _e.status) || 500).json({
+                        error: ((_g = (_f = error.response) === null || _f === void 0 ? void 0 : _f.data) === null || _g === void 0 ? void 0 : _g.error) || 'Erro ao buscar participantes.'
                     });
                 }
                 if (error instanceof AppError_1.AppError) {

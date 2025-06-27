@@ -26,44 +26,68 @@ class GenerateReportService {
     execute(_a) {
         return __awaiter(this, arguments, void 0, function* ({ participants, isAttendanceReport }) {
             const doc = new pdfkit_1.default({ margin: 50 });
-            // Stream para capturar o buffer final
             const buffers = [];
             doc.on('data', buffers.push.bind(buffers));
-            doc.on('end', () => { });
             const title = isAttendanceReport
                 ? 'Lista de Presença'
                 : 'Lista de Inscritos';
             doc.fontSize(20).text(title, { align: 'center' });
             doc.moveDown();
-            const headers = isAttendanceReport
-                ? ['Nome', 'RA', 'Curso', 'Semestre', 'Presente']
-                : ['Nome', 'E-mail'];
-            // Cabeçalho da tabela
+            // Cabeçalho
+            const tableTop = doc.y + 10;
+            const rowHeight = 25;
+            const colSpacing = 10;
+            const cols = isAttendanceReport
+                ? [
+                    { label: 'Nome', width: 150 },
+                    { label: 'RA', width: 80 },
+                    { label: 'Curso', width: 120 },
+                    { label: 'Semestre', width: 60 },
+                    { label: 'Presente', width: 70 }
+                ]
+                : [
+                    { label: 'Nome', width: 200 },
+                    { label: 'E-mail', width: 250 }
+                ];
+            // Render headers
             doc.fontSize(12).font('Helvetica-Bold');
-            headers.forEach(header => {
-                doc.text(header, { continued: true, width: 100, align: 'left' });
+            let x = doc.page.margins.left;
+            cols.forEach(col => {
+                doc.text(col.label, x, tableTop);
+                x += col.width + colSpacing;
             });
-            doc.moveDown();
-            // Conteúdo da tabela
+            // Render participants
             doc.font('Helvetica');
+            let y = tableTop + rowHeight;
             participants.forEach(participant => {
+                x = doc.page.margins.left;
+                if (y > doc.page.height - doc.page.margins.bottom - rowHeight) {
+                    doc.addPage();
+                    y = doc.page.margins.top;
+                }
                 if (isAttendanceReport) {
-                    const presence = participant.isPresent ? '✔️' : '❌';
-                    doc.text(participant.name || '-', { continued: true, width: 100 });
-                    doc.text(participant.ra || '-', { continued: true, width: 100 });
-                    doc.text(participant.course || '-', { continued: true, width: 100 });
-                    doc.text(participant.semester || '-', { continued: true, width: 100 });
-                    doc.text(presence, { align: 'left' });
+                    const values = [
+                        participant.name || '-',
+                        participant.ra || '-',
+                        participant.course || '-',
+                        participant.semester || '-',
+                        participant.isPresent ? 'Presente' : 'Ausente'
+                    ];
+                    values.forEach((text, i) => {
+                        doc.text(text, x, y, { width: cols[i].width });
+                        x += cols[i].width + colSpacing;
+                    });
                 }
                 else {
-                    doc.text(participant.name || '-', { continued: true, width: 200 });
-                    doc.text(participant.email || '-', { align: 'left' });
+                    doc.text(participant.name || '-', x, y, { width: cols[0].width });
+                    doc.text(participant.email || '-', x + cols[0].width + colSpacing, y, {
+                        width: cols[1].width
+                    });
                 }
-                doc.moveDown();
+                y += rowHeight;
             });
             doc.end();
-            const buffer = yield getStreamBuffer(doc);
-            return buffer;
+            return getStreamBuffer(doc);
         });
     }
 }
