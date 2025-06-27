@@ -14,7 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GenerateReportService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
-const get_stream_1 = __importDefault(require("get-stream"));
+function getStreamBuffer(stream) {
+    return new Promise((resolve, reject) => {
+        const buffers = [];
+        stream.on('data', data => buffers.push(data));
+        stream.on('end', () => resolve(Buffer.concat(buffers)));
+        stream.on('error', reject);
+    });
+}
 class GenerateReportService {
     execute(_a) {
         return __awaiter(this, arguments, void 0, function* ({ participants, isAttendanceReport }) {
@@ -55,7 +62,7 @@ class GenerateReportService {
                 doc.moveDown();
             });
             doc.end();
-            const buffer = yield get_stream_1.default.buffer(doc);
+            const buffer = yield getStreamBuffer(doc);
             return buffer;
         });
     }
