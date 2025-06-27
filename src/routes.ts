@@ -4,6 +4,6 @@ import { GenerateReportController } from './controllers/report/GenerateReportCon
 
 const router = Router()
 
-router.post('/reports/participants', isAuthenticated, new GenerateReportController().handle)
+router.post('/participants', isAuthenticated, new GenerateReportController().handle)
 
 export { router }
