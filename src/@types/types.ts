@@ -1,0 +1,7 @@
+enum Role {
+  DOCENT_ASSISTANT = 'DOCENT_ASSISTANT',
+  COORDINATOR = 'COORDINATOR',
+  ADMIN = 'ADMIN'
+}
+
+export { Role }
