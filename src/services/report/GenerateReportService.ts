@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit'
+import path from 'path'
 import { Participant } from '../../@types/participant.types.js'
 
 interface GenerateReportParams {
@@ -21,22 +22,43 @@ class GenerateReportService {
     isAttendanceReport
   }: GenerateReportParams): Promise<Buffer> {
     const doc = new PDFDocument({ margin: 50 })
-
     const buffers: Buffer[] = []
     doc.on('data', buffers.push.bind(buffers))
 
+    // Caminho para sua imagem
+    const footerImagePath = path.resolve(__dirname, '../../assets/footer.png')
+    const footerImageWidth = 620
+    const footerImageHeight = 100
+
+    // Função pra desenhar rodapé na página atual
+    const drawFooter = () => {
+      const { width, height, margins } = doc.page
+      const x = (width - footerImageWidth) / 2 // centralizado
+      const y = height - margins.bottom - 50 // 10px acima da margem inferior
+
+      doc.image(footerImagePath, x, y, {
+        width: footerImageWidth,
+        height: footerImageHeight
+      })
+    }
+
+    // Garante o rodapé em páginas adicionais
+    doc.on('pageAdded', drawFooter)
+
+    // Título na primeira página
     const title = isAttendanceReport
       ? 'Lista de Presença'
       : 'Lista de Inscritos'
-
     doc.fontSize(20).text(title, { align: 'center' })
     doc.moveDown()
 
-    // Cabeçalho
+    // Desenha o rodapé na primeira página
+    drawFooter()
+
+    // Configurações de tabela
     const tableTop = doc.y + 10
     const rowHeight = 25
     const colSpacing = 10
-
     const cols = isAttendanceReport
       ? [
           { label: 'Nome', width: 150 },
@@ -50,7 +72,7 @@ class GenerateReportService {
           { label: 'E-mail', width: 250 }
         ]
 
-    // Render headers
+    // Cabeçalho da tabela
     doc.fontSize(12).font('Helvetica-Bold')
     let x = doc.page.margins.left
     cols.forEach(col => {
@@ -58,13 +80,18 @@ class GenerateReportService {
       x += col.width + colSpacing
     })
 
-    // Render participants
+    // Linhas da tabela
     doc.font('Helvetica')
     let y = tableTop + rowHeight
-
-    participants.forEach(participant => {
+    for (const participant of participants) {
       x = doc.page.margins.left
-      if (y > doc.page.height - doc.page.margins.bottom - rowHeight) {
+      if (
+        y >
+        doc.page.height -
+          doc.page.margins.bottom -
+          rowHeight -
+          footerImageHeight
+      ) {
         doc.addPage()
         y = doc.page.margins.top
       }
@@ -77,7 +104,6 @@ class GenerateReportService {
           participant.semester || '-',
           participant.isPresent ? 'Presente' : 'Ausente'
         ]
-
         values.forEach((text, i) => {
           doc.text(text, x, y, { width: cols[i].width })
           x += cols[i].width + colSpacing
@@ -90,8 +116,9 @@ class GenerateReportService {
       }
 
       y += rowHeight
-    })
+    }
 
+    // Finaliza e retorna buffer
     doc.end()
     return getStreamBuffer(doc)
   }
