@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GenerateReportService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
+const path_1 = __importDefault(require("path"));
 function getStreamBuffer(stream) {
     return new Promise((resolve, reject) => {
         const buffers = [];
@@ -28,12 +29,31 @@ class GenerateReportService {
             const doc = new pdfkit_1.default({ margin: 50 });
             const buffers = [];
             doc.on('data', buffers.push.bind(buffers));
+            // Caminho para sua imagem
+            const footerImagePath = path_1.default.resolve(__dirname, '../../assets/footer.png');
+            const footerImageWidth = 620;
+            const footerImageHeight = 100;
+            // Função pra desenhar rodapé na página atual
+            const drawFooter = () => {
+                const { width, height, margins } = doc.page;
+                const x = (width - footerImageWidth) / 2; // centralizado
+                const y = height - margins.bottom - 50; // 10px acima da margem inferior
+                doc.image(footerImagePath, x, y, {
+                    width: footerImageWidth,
+                    height: footerImageHeight
+                });
+            };
+            // Garante o rodapé em páginas adicionais
+            doc.on('pageAdded', drawFooter);
+            // Título na primeira página
             const title = isAttendanceReport
                 ? 'Lista de Presença'
                 : 'Lista de Inscritos';
             doc.fontSize(20).text(title, { align: 'center' });
             doc.moveDown();
-            // Cabeçalho
+            // Desenha o rodapé na primeira página
+            drawFooter();
+            // Configurações de tabela
             const tableTop = doc.y + 10;
             const rowHeight = 25;
             const colSpacing = 10;
@@ -49,19 +69,23 @@ class GenerateReportService {
                     { label: 'Nome', width: 200 },
                     { label: 'E-mail', width: 250 }
                 ];
-            // Render headers
+            // Cabeçalho da tabela
             doc.fontSize(12).font('Helvetica-Bold');
             let x = doc.page.margins.left;
             cols.forEach(col => {
                 doc.text(col.label, x, tableTop);
                 x += col.width + colSpacing;
             });
-            // Render participants
+            // Linhas da tabela
             doc.font('Helvetica');
             let y = tableTop + rowHeight;
-            participants.forEach(participant => {
+            for (const participant of participants) {
                 x = doc.page.margins.left;
-                if (y > doc.page.height - doc.page.margins.bottom - rowHeight) {
+                if (y >
+                    doc.page.height -
+                        doc.page.margins.bottom -
+                        rowHeight -
+                        footerImageHeight) {
                     doc.addPage();
                     y = doc.page.margins.top;
                 }
@@ -85,7 +109,8 @@ class GenerateReportService {
                     });
                 }
                 y += rowHeight;
-            });
+            }
+            // Finaliza e retorna buffer
             doc.end();
             return getStreamBuffer(doc);
         });
