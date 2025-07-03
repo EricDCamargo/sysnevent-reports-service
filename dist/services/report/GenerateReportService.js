@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GenerateReportService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 function getStreamBuffer(stream) {
     return new Promise((resolve, reject) => {
         const buffers = [];
@@ -30,7 +31,9 @@ class GenerateReportService {
             const buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             // Caminho para sua imagem
-            const footerImagePath = path_1.default.resolve(__dirname, '../../assets/footer.png');
+            const devPath = path_1.default.join(__dirname, '..', '..', 'assets', 'footer.png');
+            const prodPath = path_1.default.join(__dirname, '..', 'assets', 'footer.png');
+            const footerImagePath = fs_1.default.existsSync(prodPath) ? prodPath : devPath;
             const footerImageWidth = 620;
             const footerImageHeight = 100;
             // Função pra desenhar rodapé na página atual

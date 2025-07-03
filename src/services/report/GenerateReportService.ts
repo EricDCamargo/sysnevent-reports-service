@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit'
 import path from 'path'
+import fs from 'fs'
 import { Participant } from '../../@types/participant.types.js'
 
 interface GenerateReportParams {
@@ -26,7 +27,10 @@ class GenerateReportService {
     doc.on('data', buffers.push.bind(buffers))
 
     // Caminho para sua imagem
-    const footerImagePath = path.resolve(__dirname, '../../assets/footer.png')
+    const devPath = path.join(__dirname, '..', '..', 'assets', 'footer.png')
+    const prodPath = path.join(__dirname, '..', 'assets', 'footer.png')
+
+    const footerImagePath = fs.existsSync(prodPath) ? prodPath : devPath
     const footerImageWidth = 620
     const footerImageHeight = 100
 
